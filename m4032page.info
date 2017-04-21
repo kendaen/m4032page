@@ -1,0 +1,4 @@
+name = 403 to page
+description = "Redirect 403 to specific page depend on user role."
+core = 7.x
+configure = admin/config/system/m4032page
