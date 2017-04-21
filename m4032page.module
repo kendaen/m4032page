@@ -2,7 +2,7 @@
 
 /**
  * @file
- * 403 to page module functions.
+ * The 403 to page module functions.
  */
 
 /**
@@ -13,6 +13,7 @@ function m4032page_menu() {
   $items['m4032page'] = array(
     'title'           => '403 to page callback',
     'page callback'   => 'm4032page_callback',
+    // Everyone can access the url.
     'access callback' => TRUE,
     'type'            => MENU_CALLBACK,
   );
@@ -45,7 +46,7 @@ function m4032page_callback() {
  * Settings form for redirection destination depend on roles.
  */
 function m4032page_admin_settings() {
-  $form  = array();
+  $form = array();
   $roles = user_roles();
 
   $form['redirect_role'] = array(
