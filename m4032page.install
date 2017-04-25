@@ -1,0 +1,12 @@
+<?php
+
+/**
+ * @file
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function m4032page_uninstall() {
+  variable_del('m4032page');
+}

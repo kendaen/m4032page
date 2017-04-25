@@ -25,6 +25,7 @@ function m4032page_menu() {
     'page arguments'    => array('m4032page_admin_settings'),
     'access arguments'  => array('administer site configuration'),
   );
+
   return $items;
 }
 
@@ -32,14 +33,25 @@ function m4032page_menu() {
  * Page callback for m4032page.
  */
 function m4032page_callback() {
-  global $user;
-  $roles = array_keys($user->roles);
-  rsort($roles);
-  $rid = reset($roles);
-  $path = variable_get('m4032page_role_' . $rid, '<front>');
+  if (!empty(variable_get('m4032page'))) {
+    global $user, $base_url;
 
-  header('Location: ' . $path, TRUE, 302);
-  drupal_exit();
+    $m4032page = variable_get('m4032page');
+    uasort($m4032page, 'drupal_sort_weight');
+
+    $roles = array_keys($user->roles);
+
+    $path = $base_url;
+    foreach ($m4032page as $key => $info) {
+      if (in_array(explode('_', $key)[2], $roles)) {
+        $path = url($info['path']);
+        break;
+      }
+    }
+
+    header('Location: ' . $path, TRUE, 302);
+    drupal_exit();
+  }
 }
 
 /**
@@ -49,20 +61,99 @@ function m4032page_admin_settings() {
   $form = array();
   $roles = user_roles();
 
-  $form['redirect_role'] = array(
+  $form['m4032page'] = array(
     '#type'        => 'fieldset',
     '#title'       => t('Redirect destination per role'),
     '#collapsible' => TRUE,
     '#collapsed'   => FALSE,
+    '#tree'        => TRUE,
+    '#theme'       => 'm4032page_settings',
+    '#description' => t('If user has multiple roles,
+the module will get one role with the top priority by order in below list.'),
   );
 
+  $m4032page = variable_get('m4032page');
+
   foreach (array_keys($roles) as $rid) {
-    $form['redirect_role']['m4032page_role_' . $rid] = array(
-      '#title'         => t('":role" users redirect path', array(':role' => $roles[$rid])),
+    $default_value
+      = isset($m4032page['m4032page_role_' . $rid])
+      ? $m4032page['m4032page_role_' . $rid]
+      : array('path' => '', 'weight' => 0);
+
+    $form['m4032page']['m4032page_role_' . $rid] = array(
+      '#prefix' => '<div id="curve-attributes">',
+      '#suffix' => '</div>',
+      '#tree'   => TRUE,
+    );
+
+    $form['m4032page']['m4032page_role_' . $rid]['label'] = array(
+      '#type'   => 'item',
+      '#markup' => $roles[$rid],
+    );
+
+    $form['m4032page']['m4032page_role_' . $rid]['path'] = array(
       '#type'          => 'textfield',
-      '#default_value' => variable_get('m4032page_role_' . $rid, ''),
+      '#default_value' => $default_value['path'],
+    );
+
+    $form['m4032page']['m4032page_role_' . $rid]['weight'] = array(
+      '#type'          => 'textfield',
+      '#size'          => 3,
+      '#default_value' => $default_value['weight'],
+      '#attributes'    => array('class' => array('item-row-weight')),
     );
   }
 
   return system_settings_form($form);
+}
+
+/**
+ * Implements hook_theme().
+ */
+function m4032page_theme($existing, $type, $theme, $path) {
+  $themes = array(
+    'm4032page_settings' => array(
+      'render element' => 'element'
+    ),
+  );
+  return $themes;
+}
+
+/**
+ * Theme function.
+ */
+function theme_m4032page_settings($vars) {
+  $element = $vars['element'];
+  $element_children = array();
+
+  foreach (element_children($element) as $key) {
+    $element_children[$key] = $element[$key];
+  }
+
+  uasort($element_children, 'drupal_sort_weight');
+
+  drupal_add_tabledrag('m403page_settings_table', 'order', 'sibling', 'item-row-weight');
+
+  $header = array(
+    'label'  => t('User Role'),
+    'path'   => t('Redirect Path'),
+    'weight' => t('Weight'),
+  );
+
+  $rows = array();
+  foreach ($element_children as $element_child) {
+    $row = array();
+    $row['data'] = array();
+    foreach ($header as $fieldname => $title) {
+      $row['data'][] = drupal_render($element_child[$fieldname]);
+      $row['class']  = array('draggable');
+    }
+    $rows[] = $row;
+  }
+
+  return theme('table', array(
+    'header'     => $header,
+    'rows'       => $rows,
+    'attributes' => array('id' => 'm403page_settings_table'),
+  ));
 }
